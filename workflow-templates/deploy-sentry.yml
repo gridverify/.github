@@ -1,0 +1,58 @@
+name: Deploy Sentry
+# Deploy a release to Sentry so that it can symbolicate errors, crashes, etc. Should be ran after each staging and production deployment.
+
+on: 
+  workflow_call:
+    inputs: 
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+      SENTRY_PROJECT:
+        description: 'Name of the project in sentry that the deploy is going to'
+        required: true
+        type: string
+
+jobs:
+  release_in_sentry_job:
+    name: Sentry Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Read Build From package.json
+        id: build
+        uses: notiz-dev/github-action-json-property@release
+        with:
+          path: 'package.json'
+          prop_path: 'build'
+      - name: Store Build Number
+        run: |
+          echo "build_number=${{steps.build.outputs.prop}}" >> $GITHUB_ENV
+      - name: Read Version From package.json
+        id: version
+        uses: notiz-dev/github-action-json-property@release
+        with:
+          path: 'package.json'
+          prop_path: 'version'
+      - name: Store Version Number
+        run: |
+          echo "version_number=${{steps.version.outputs.prop}}" >> $GITHUB_ENV
+      - name: Create Sentry Release
+        uses: getsentry/action-release@v1.7.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ inputs.SENTRY_PROJECT }}
+        with:
+          ignore_missing: true
+          environment: ${{ inputs.TARGET_ENV }}
+          version: ${{ inputs.SENTRY_PROJECT }}@${{ env.version_number }}+${{env.build_number}}
+          finalize: true
+          set_commits: auto
+          sourcemaps: ./dist
+          ignore_empty: true

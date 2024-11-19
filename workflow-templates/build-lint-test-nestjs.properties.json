@@ -1,0 +1,10 @@
+{
+    "name": "Build Lint Test for NestJS Projects",
+    "description": "Run build, lint, and unit tests for NestJS configured projects. Ran for Pull Request checks before merging.",
+    "iconName": "octicon copilot",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

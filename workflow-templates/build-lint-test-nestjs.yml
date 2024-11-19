@@ -1,0 +1,133 @@
+name: Build Lint Test NestJS
+# Build, lint, and run unit tests for NestJS project. 
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+
+jobs:
+  build_job:
+    name: Build Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+          cache: 'npm'
+      - name: Authenticate with private NPM package
+        env:
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      - name: Install Dependencies
+        run: npm ci
+      - name: Login To Heroku + Build Server
+        id: build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          HEROKU_API_TOKEN: ${{ secrets.HEROKU_API_TOKEN }}
+          NODE_ENV: ${{ inputs.TARGET_ENV }}
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: |
+          HEROKU_API_KEY=$HEROKU_API_TOKEN heroku config -a ${{ inputs.TARGET_APP }} > env.yaml 
+          for keyval in $(grep -E ':\s+' env.yaml | sed -e 's/: */=/'); do
+            echo $keyval >> .env
+          done
+          npm run build --loglevel error
+      - name: Check If Any Build Errors Exist
+        run: grep -q '[^[:space:]]' stdErr.txt && echo "build_failed=true" >> $GITHUB_ENV || echo "buid_succeeded=true" >> $GITHUB_ENV
+      - name: Fail If Build Errors Exist
+        if: ${{ env.build_failed }}
+        run: exit 1
+      - name: Comment On Job Fail
+        if: failure()
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please check the `${{ github.job }}`'s summary page, download the `stdErr.txt` artifact, and resolve the build errors.
+      - name: Upload Build Errors
+        if: always() # ensures report is still uploaded if there are build errors
+        uses: actions/upload-artifact@v4
+        with:
+          name: stdErr
+          path: ./stdErr.txt
+          retention-days: 7
+
+  # Note - we do not lint YAML files (`./workflows`).
+  lint_job:
+    name: Lint Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Lint Code Base
+        uses: github/super-linter@v4
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          DEFAULT_BRANCH: main
+          VALIDATE_YAML: false
+          FILTER_REGEX_EXCLUDE: .*.github/.*
+
+  unit_test_job:
+    name: Unit Test Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '18.12.x'
+      - name: Authenticate with private NPM package
+        env:
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      - name: Install Dependencies
+        run: npm ci
+      - name: Get project env variables
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          HEROKU_API_TOKEN: ${{ secrets.HEROKU_API_TOKEN }}
+          NODE_ENV: ${{ inputs.TARGET_ENV }}
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: |
+          HEROKU_API_KEY=$HEROKU_API_TOKEN heroku config -a ${{ inputs.TARGET_APP }} > env.yaml
+          for keyval in $(grep -E ':\s+' env.yaml | sed -e 's/: */=/'); do
+            echo $keyval >> .env
+          done
+      - name: Run Tests
+        run: npm run test
+      - name: Upload Test Report
+        if: always() # ensures test-report is still uploaded if fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: .jest/*
+          retention-days: 3
+      - name: Fail Check
+        if: failure()
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please check the `${{ github.job }}`'s summary page, download the `test-report` artifact, and update your failing tests.

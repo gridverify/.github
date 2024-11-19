@@ -1,0 +1,33 @@
+name: Check PR
+# Check that the Pull Request follows organization standards and meets specifications.
+
+on: 
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+
+jobs: 
+  check_pr_title_format_job:
+    name: Check PR Title Format Job
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: deepakputhraya/action-pr-title@master
+        with:
+          regex: '^\[sc\-\d+] .+$' # Regex that the title should match.
+          github_token: ${{ secrets.GH_API_TOKEN }}
+      - name: Comment On Job Fail
+        if: failure()
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please rename your PR using this format `[sc-<STORY-ID>] Description goes here`.

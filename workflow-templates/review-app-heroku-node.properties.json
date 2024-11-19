@@ -1,0 +1,5 @@
+{
+    "name": "Deploy to Heroku Review App",
+    "description": "Deploy to Heroku Review App so that testing can be done before PR is merged in",
+    "iconName": "octicon rocket"
+}

@@ -1,0 +1,97 @@
+name: Create HotFix PR
+# If the HotFix label exists on the PR then we will create a HotFix to production
+# once the PR gets merged 
+
+on: 
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+        
+jobs:
+  create_hotfix_pr_job:
+    name: Create Hot Fix PR Job
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Get PR for push
+        uses: 8BitJonny/gh-get-current-pr@2.1.1
+        id: pr_info
+        with:
+          github-token: ${{ secrets.GH_API_TOKEN }}
+          filterOutClosed: false
+          filterOutDraft: true
+      - name: Extract HotFix Label
+        id: hotfix_label_check
+        run: |
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Hot Fix Release Candidate"* ]]; then
+            echo ::set-output name=is_hot_fix_release::true
+          else
+            echo ::set-output name=is_hot_fix_release::false
+          fi 
+      - name: Set GitHub User
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        run: |
+          git config --global user.name "Grid Bot"
+          git config --global user.email "system@gridverify.com"
+      - name: Checkout Production Branch
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: production
+      - name: Fetch Main from Origin
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        run: |
+          git fetch
+          git checkout main
+          git checkout production
+      - name: Cherry Pick the Merge Commit Fix
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        run: git cherry-pick "${{ fromJSON(steps.pr_info.outputs.pr).merge_commit_sha }}" --strategy-option theirs
+      - name: Generate Variables
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        id: vars
+        run: |
+          echo ::set-output name=pr_branch_name::"auto/hot-fix-release/pr-$(date +%s)"
+          echo ::set-output name=comm_mess::"$(date +%A) Hot Fix Release Candidate $(date +%m-%d-%Y) - Trigger CI Checks"
+          echo ::set-output name=pr_title::"$(date +%A) Hot Fix Release Candidate - $(date +%T)"
+          echo ::set-output name=pr_body_footer::"This release candidate PR was ci auto-generated on $(date +%m-%d-%YT%H:%M)\
+            by [create-pull-request](https://github.com/peter-evans/create-pull-request)."
+      - name: Render PR Template
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        id: template
+        uses: chuhlomin/render-template@v1.5
+        with:
+          template: .github/PULL_REQUEST_TEMPLATES/production-default.md
+      - name: Create Pull Request
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        id: pr_vars
+        uses: peter-evans/create-pull-request@v5
+        with:
+          base: 'production'
+          committer: Grid Bot <system@gridverify.com>
+          author: FID Bot <system@gridverify.com>
+          token: ${{ secrets.GH_API_TOKEN }}
+          branch: ${{ steps.vars.outputs.pr_branch_name }}
+          delete-branch: true
+          commit-message: ${{ steps.vars.outputs.comm_mess }}
+          title: ${{ steps.vars.outputs.pr_title }}
+          body: "${{ steps.template.outputs.result }} -- ${{ steps.vars.outputs.pr_body_footer }}"
+          labels: |
+            ci
+          assignees: grain-ci-bot
+      - name: Notify GitHub Reviewer
+        if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} Hot fix release candidate [pull request](${{ steps.pr_vars.outputs.pull-request-url }}) has been opened. Check the PR\
+              #${{ steps.pr_vars.outputs.pull-request-number }} to deploy the hot fix.

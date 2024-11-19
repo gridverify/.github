@@ -1,0 +1,5 @@
+{
+    "name": "Setup Initial CI Variables",
+    "description": "Setup the initial CI variables you will need to run the GitHub action variables.",
+    "iconName": "octicon zap"
+}

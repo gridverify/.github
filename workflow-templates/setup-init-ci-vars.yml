@@ -1,0 +1,38 @@
+name: Setup Init CI Vars
+# Setup initial CI vars needed to run the workflows
+
+on: 
+  workflow_call:
+    outputs:
+      APP_NAME:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        value: ${{ jobs.setup_vars_job.outputs.APP_NAME }}
+      ENV_NAME: 'What environment are we targeting: staging, production, etc'
+        description: 
+        value: ${{ jobs.setup_vars_job.outputs.ENV_NAME }}
+
+jobs:
+  # Get current env and target app
+  setup_vars_job:
+    name: Setup Vars Job
+    runs-on: 'ubuntu-latest'
+    outputs: 
+      APP_NAME: ${{ steps.vars.outputs.APP_NAME }}
+      ENV_NAME: ${{ steps.vars.outputs.ENV_NAME }}
+    steps:
+      - name: Set Vars
+        id: vars
+        run: |
+          APP_NAME=<<<<<<ENTER_STAGING_APP_NAME_HERE_SEE_DESCRIPTION_ABOVE>>>>>>>
+          ENV_NAME=staging
+          BRANCH_NAME=$GITHUB_BASE_REF
+          echo $BRANCH_NAME
+          if [ $BRANCH_NAME == 'production' ]; then
+            ENV_NAME=production
+            APP_NAME=<<<<<<ENTER_PRODUCTION_APP_NAME_HERE_SEE_DESCRIPTION_ABOVE>>>>>>>
+          elif [ $BRANCH_NAME != 'production' ]; then
+            ENV_NAME=staging
+            APP_NAME=<<<<<<ENTER_STAGING_APP_NAME_HERE_SEE_DESCRIPTION_ABOVE>>>>>>>
+          fi
+          echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "APP_NAME=${APP_NAME}" >> $GITHUB_OUTPUT

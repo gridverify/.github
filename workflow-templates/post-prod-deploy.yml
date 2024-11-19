@@ -1,0 +1,77 @@
+name: Post Prod Deploy
+# Post Production Deployment actions to take
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+
+jobs:
+  tag_release_job:
+    if: github.event.pull_request.base.ref == 'production'
+    name: Tag & Release Prod Job
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Get Vars
+        run: |
+          sudo apt-get install jq
+          CURRENT_B_NUMBER=$(jq -r '.build' package.json)
+          CURRENT_V_NUMBER=$(jq -r '.version' package.json)
+          echo "VERSION_NUMBER=$CURRENT_V_NUMBER" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$CURRENT_B_NUMBER" >> $GITHUB_ENV
+      - name: Set GitHub User
+        run: |
+          git config --global user.name "System Bot"
+          git config --global user.email "system@gridverify.com"
+      - name: Tag & Release
+        uses: zendesk/action-create-release@v1
+        with:
+          tag_name: ${{ env.VERSION_NUMBER }}.${{ env.BUILD_NUMBER }}
+          release_name: ${{ env.VERSION_NUMBER }} (${{ env.BUILD_NUMBER }})
+
+  post_prod_release_job:
+    # Bump the version number and the build number
+    name: Post Prod Release Job
+    needs: [tag_release_job]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GH_API_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+      - name: Authenticate with private NPM package
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      - name: Install Dependencies
+        run: npm ci
+      - name: Bump Version and Build
+        run: |
+          npm run bump-patch
+          npm run bump-build
+      - name: Set GitHub User
+        run: |
+          git config --global user.name "Grid Bot"
+          git config --global user.email "system@gridverify.com"
+      - name: Git Push
+        run: |
+          git add package.json
+          git commit -m "Version bump by CI [skip ci]"
+          git push

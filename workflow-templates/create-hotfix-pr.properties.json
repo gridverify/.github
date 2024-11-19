@@ -1,0 +1,5 @@
+{
+    "name": "Create Hot Fix Pull Request to Production",
+    "description": "If the 'Hot Fix Release Candidate' label is found on a Pull Request then create a Hot Fix Pull Request to Production based on the original Pull Request.",
+    "iconName": "octicon git-pull-request"
+}

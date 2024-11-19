@@ -1,0 +1,85 @@
+name: Review App Heroku Node
+# Create and deploy a branch to a Heroku Review App according to the PR. This is for 
+# NodeJS based apps.
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+      PIPELINE_NAME:
+        description: 'The name of the Heroku pipeline that contains this app and its instances'
+        required: true
+        type: string
+jobs:
+  deploy_to_review_app_job:
+    name: Deploy To Review App Job
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_APP_NAME: ${{ inputs.TARGET_APP }}-review-pr-${{ github.event.number }}
+      TARGET_APP: ${{ inputs.TARGET_APP }}
+      PIPELINE_NAME: ${{ inputs.PIPELINE_NAME }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event.action == 'closed' && 1 || 0 }}
+          ref: ${{ github.event.action != 'closed' && github.head_ref || '' }}
+      - name: Setup Node
+        if: github.event.action != 'closed'
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+          cache: 'npm'
+      - name: Authenticate with private NPM package
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      - name: Install Dependencies
+        if: github.event.action != 'closed'
+        run: npm ci
+      - name: Login To Heroku
+        uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_TOKEN }}
+          heroku_email: system@gridverify.com
+          heroku_app_name: ${{ env.HEROKU_APP_NAME }}
+          justlogin: true
+      - name: Check If Heroku App Already Exists
+        run: heroku domains --app=${{ env.HEROKU_APP_NAME }} && echo "app_exists=true" >> "$GITHUB_ENV"
+        continue-on-error: true
+      - name: Create Heroku App
+        if: ${{ !env.app_exists }}
+        run: heroku apps:create --team grid ${{ env.HEROKU_APP_NAME }}
+      - name: Add Heroku App To Pipeline
+        if: ${{ !env.app_exists }}
+        run: heroku pipelines:add ${{ env.PIPELINE_NAME }} --app=${{ env.HEROKU_APP_NAME }} --stage=development
+      - name: Copy Environment Variables To Heroku app
+        if: github.event.action != 'closed'
+        run: |
+          heroku config --shell --app=${{ env.TARGET_APP }} > .env
+          sed -i -e 's/LIMITER_MAX=[0-9]\{1,\}/LIMITER_MAX=1000/' .env
+          cat .env | tr '\n' ' ' | xargs heroku config:set --app=${{ env.HEROKU_APP_NAME }}
+      - name: Add Heroku Remote
+        if: github.event.action != 'closed'
+        run: heroku git:remote --app=${{ env.HEROKU_APP_NAME }}
+      - name: Push To Heroku
+        if: github.event.action != 'closed'
+        run: git push heroku ${{ github.head_ref }}:main --force
+      - name: Destroy Heroku App
+        if: github.event.action == 'closed'
+        run: heroku apps:destroy --app=${{ env.HEROKU_APP_NAME }} --confirm=${{ env.HEROKU_APP_NAME }}
+      - name: Destroy Github Environment
+        continue-on-error: true
+        if: github.event.action == 'closed'
+        uses: strumwolf/delete-deployment-environment@v3.0.0
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+          environment: ${{ env.HEROKU_APP_NAME }}
+          onlyRemoveDeployments: true

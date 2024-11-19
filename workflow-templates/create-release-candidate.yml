@@ -1,0 +1,150 @@
+name: Create Release Candidate
+# Creates a release candidate from `main` branch to `production` branch
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+      NEXT_RELEASE_DAYS:
+        description: 'The days of the week that the release candidate is created on. See https://github.com/marketplace/actions/next-release-date for valid input options.'
+        required: true
+        type: string
+
+jobs:
+  create_release_candidate_job:
+    name: Create Release Candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: production
+
+      - name: Dirty Production with Main
+        run: |
+          git fetch origin main:main
+          git reset --hard main
+
+      - name: Generate Variables
+        id: vars
+        run: |
+          echo ::set-output name=pr_branch_name::"auto/release/pr-$(TZ=":US/Eastern" date +%s)"
+          echo ::set-output name=comm_mess::"$(date +%A) Release Candidate $(TZ=":US/Eastern" date +%m-%d-%Y) - Trigger CI Checks"
+          echo ::set-output name=pr_title::"Weekly Release Candidate PR - $(TZ=":US/Eastern" date +%m-%d-%Y)"
+          echo ::set-output name=pr_body_footer::"This release candidate PR was ci auto-generated on $(TZ=":US/Eastern" date +%m-%d-%YT%H:%M)EST\
+            by [create-pull-request](https://github.com/peter-evans/create-pull-request)."
+          echo ::set-output name=repo_owner::${GITHUB_REPOSITORY_OWNER}
+          echo ::set-output name=repo_name::${GITHUB_REPOSITORY#*/}
+          echo ::set-output name=milestone_due_date::"$(TZ=":US/Eastern" date +"%Y-%m-%dT%H:%M:%SZ")"
+
+      - name: Fetch The Matching RC Milestone
+        id: milestone_vars
+        uses: cketant/fetch-rc-milestone@v1.0.1
+        with:
+          repoOwner: ${{ steps.vars.outputs.repo_owner }}
+          repo: ${{ steps.vars.outputs.repo_name }}
+          githubApiToken: ${{ secrets.GH_API_TOKEN }}
+          dueOnDate: ${{ steps.vars.outputs.milestone_due_date }}
+
+      - name: Render PR Template
+        id: template
+        uses: chuhlomin/render-template@v1.5
+        with:
+          template: .github/PULL_REQUEST_TEMPLATES/production-default.md
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5.0.2
+        with:
+          committer: Grid Bot <system@gridverify.com>
+          author: Grid Bot <system@gridverify.com>
+          token: ${{ secrets.GH_API_TOKEN }}
+          branch: ${{ steps.vars.outputs.pr_branch_name }}
+          delete-branch: true
+          commit-message: ${{ steps.vars.outputs.comm_mess }}
+          title: ${{ steps.vars.outputs.pr_title }}
+          body: "${{ steps.template.outputs.result }}\n\n[Release Candidate Merged PRs](${{ steps.milestone_vars.outputs.milestone-url }}?closed=1)\n\n\n*${{ steps.vars.outputs.pr_body_footer }}*"
+          milestone: ${{ steps.milestone_vars.outputs.milestone-number }}
+          labels: |
+            ci
+          assignees: system-grid
+
+      - name: Close RC Milestone 
+        uses: Beakyn/gha-close-milestone@v1.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        with:
+          repository: ${{ github.repository }}
+          milestone-title: ${{ steps.milestone_vars.outputs.milestone-title }}
+
+      - name: Reset Repo
+        run: |
+          git reset --hard origin/production
+
+      - name: Checkout Auto PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.vars.outputs.pr_branch_name }}
+
+      - name: Setup SSH Keys
+        uses: webfactory/ssh-agent@v0.4.1
+        with:
+          ssh-private-key: ${{ secrets.SYSTEM_ACCOUNT_PRIVATE_KEY }}
+
+      - name: Set GitHub User
+        run: |
+          git config --global user.name "Grid Bot"
+          git config --global user.email "system@gridverify.com"
+
+      - name: Fix Conflicts & Push
+        run: |
+          git merge --no-edit --allow-unrelated-histories --strategy=ours origin/production
+          git push
+
+      - name: Read Version From package.json
+        id: version
+        uses: notiz-dev/github-action-json-property@release
+        with:
+          path: 'package.json'
+          prop_path: 'version'
+          
+      - name: Trigger Checks # https://luxiyalu.com/expected-waiting-for-status-to-be-reported/
+        run: |
+          echo "Current Version ${{ steps.version.outputs.prop }}" >> README.md
+          git add README.md
+          git commit -m "${{ steps.vars.outputs.comm_mess }}"
+          git push
+
+  create_next_rc_milestone_job: # Need to create the next RC Milestone right after RC PR is created
+    name: Create Next RC Milestone Job 
+    needs: [create_release_candidate_job]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Next Release Date
+        id: vars
+        uses: cketant/next-release-date@v1.0.2
+        with:
+          releaseDays: "2"
+
+      - name: Milestone Vars
+        id: milestone_vars
+        run: |
+          echo ::set-output name=milestone_title::"${{ steps.vars.outputs.next_rc_day_of_week }} Release Candidate ${{ steps.vars.outputs.next_rc_date_title }}"
+          echo ::set-output name=due_on::"${{ steps.vars.outputs.next_rc_date_iso }}"
+          echo ::set-output name=desc::"PRs that are going into Release Candidate ${{ steps.vars.outputs.next_rc_date_title }}. Created by **ci**."
+
+      - name: Create Next RC Milestone
+        uses: oinume/create-scheduled-milestone-action@v1.0.0
+        with:
+          title: ${{ steps.milestone_vars.outputs.milestone_title }}
+          state: "open"
+          description: ${{ steps.milestone_vars.outputs.desc }}
+          due_on: ${{ steps.milestone_vars.outputs.due_on }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}

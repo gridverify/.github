@@ -1,0 +1,5 @@
+{
+    "name": "Deploy to Sentry",
+    "description": "Deploy to Sentry for a specific environment such as development, staging, or production. This ensures that Sentry can symbolicate crashes and errors. Should be ran after Heroku deployments. ",
+    "iconName": "octicon rocket"
+}

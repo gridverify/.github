@@ -1,0 +1,5 @@
+{
+    "name": "Create a Release Candidate",
+    "description": "Create a Release Candidate from main to production.",
+    "iconName": "octicon git-pull-request"
+}

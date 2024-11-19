@@ -1,0 +1,5 @@
+{
+    "name": "Pull Request Checks",
+    "description": "Run a series of general Pull Request checks that ensure the Pull Request is to the organization standard and format.",
+    "iconName": "octicon copilot"
+}
