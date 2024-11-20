@@ -44,11 +44,6 @@ jobs:
             echo $keyval >> .env
           done
           npm run build --loglevel error
-      - name: Check If Any Build Errors Exist
-        run: grep -q '[^[:space:]]' stdErr.txt && echo "build_failed=true" >> $GITHUB_ENV || echo "buid_succeeded=true" >> $GITHUB_ENV
-      - name: Fail If Build Errors Exist
-        if: ${{ env.build_failed }}
-        run: exit 1
       - name: Comment On Job Fail
         if: failure()
         uses: mshick/add-pr-comment@v1
@@ -58,14 +53,7 @@ jobs:
         with:
           allow-repeats: true
           message: |
-            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please check the `${{ github.job }}`'s summary page, download the `stdErr.txt` artifact, and resolve the build errors.
-      - name: Upload Build Errors
-        if: always() # ensures report is still uploaded if there are build errors
-        uses: actions/upload-artifact@v4
-        with:
-          name: stdErr
-          path: ./stdErr.txt
-          retention-days: 7
+            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please check the `${{ github.job }}`'s summary page and look at the 'Build Job' for the errors.
 
   # Note - we do not lint YAML files (`./workflows`).
   lint_job:
@@ -91,7 +79,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: '18.12.x'
       - name: Authenticate with private NPM package
@@ -120,7 +108,8 @@ jobs:
         with:
           name: test-report
           path: .jest/*
-          retention-days: 3
+          retention-days: 7
+          include-hidden-files: true
       - name: Fail Check
         if: failure()
         uses: mshick/add-pr-comment@v1
