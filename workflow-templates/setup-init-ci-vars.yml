@@ -7,8 +7,8 @@ on:
       APP_NAME:
         description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
         value: ${{ jobs.setup_vars_job.outputs.APP_NAME }}
-      ENV_NAME: 'What environment are we targeting: staging, production, etc'
-        description: 
+      ENV_NAME:
+        description: 'What environment are we targeting: staging, production, etc'
         value: ${{ jobs.setup_vars_job.outputs.ENV_NAME }}
 
 jobs:
