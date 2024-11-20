@@ -25,4 +25,4 @@ jobs:
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_TOKEN }}
           heroku_app_name: ${{ inputs.TARGET_APP }} # determines which environment
-          heroku_email: system@gridverify.com
+          heroku_email: SYSTEM_EMAIL

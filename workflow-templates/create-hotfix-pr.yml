@@ -38,7 +38,7 @@ jobs:
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         run: |
           git config --global user.name "Grid Bot"
-          git config --global user.email "system@gridverify.com"
+          git config --global user.email "SYSTEM_EMAIL"
       - name: Checkout Production Branch
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         uses: actions/checkout@v4
@@ -74,8 +74,8 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           base: 'production'
-          committer: Grid Bot <system@gridverify.com>
-          author: FID Bot <system@gridverify.com>
+          committer: Grid Bot <SYSTEM_EMAIL>
+          author: FID Bot <SYSTEM_EMAIL>
           token: ${{ secrets.GH_API_TOKEN }}
           branch: ${{ steps.vars.outputs.pr_branch_name }}
           delete-branch: true

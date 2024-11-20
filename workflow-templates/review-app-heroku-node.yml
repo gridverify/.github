@@ -48,7 +48,7 @@ jobs:
         uses: akhileshns/heroku-deploy@v3.12.12
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_TOKEN }}
-          heroku_email: system@gridverify.com
+          heroku_email: SYSTEM_EMAIL
           heroku_app_name: ${{ env.HEROKU_APP_NAME }}
           justlogin: true
       - name: Check If Heroku App Already Exists

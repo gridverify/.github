@@ -33,7 +33,7 @@ jobs:
       - name: Set GitHub User
         run: |
           git config --global user.name "System Bot"
-          git config --global user.email "system@gridverify.com"
+          git config --global user.email "SYSTEM_EMAIL"
       - name: Tag & Release
         uses: zendesk/action-create-release@v1
         with:
@@ -69,7 +69,7 @@ jobs:
       - name: Set GitHub User
         run: |
           git config --global user.name "Grid Bot"
-          git config --global user.email "system@gridverify.com"
+          git config --global user.email "SYSTEM_EMAIL"
       - name: Git Push
         run: |
           git add package.json
