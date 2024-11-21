@@ -74,8 +74,8 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           base: 'production'
-          committer: Grid Bot <${{ secrets.SYSTEM_EMAIL }}>
-          author: FID Bot <${{ secrets.SYSTEM_EMAIL }}>
+          committer: System Bot <${{ secrets.SYSTEM_EMAIL }}>
+          author: System Bot <${{ secrets.SYSTEM_EMAIL }}>
           token: ${{ secrets.GH_API_TOKEN }}
           branch: ${{ steps.vars.outputs.pr_branch_name }}
           delete-branch: true

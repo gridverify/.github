@@ -12,10 +12,6 @@ on:
         description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
         required: true
         type: string
-      SENTRY_PROJECT:
-        description: 'Name of the project in sentry that the deploy is going to'
-        required: true
-        type: string
 
 jobs:
   release_in_sentry_job:
@@ -47,11 +43,11 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ inputs.SENTRY_PROJECT }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           ignore_missing: true
           environment: ${{ inputs.TARGET_ENV }}
-          version: ${{ inputs.SENTRY_PROJECT }}@${{ env.version_number }}+${{env.build_number}}
+          version: ${{ secrets.SENTRY_PROJECT }}@${{ env.version_number }}+${{env.build_number}}
           finalize: true
           set_commits: auto
           sourcemaps: ./dist
