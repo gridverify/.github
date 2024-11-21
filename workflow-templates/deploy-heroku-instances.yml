@@ -1,0 +1,26 @@
+name: Deploy Heroku Instances
+# Deploy to the staging, sandbox, production, etc instances based on a merge. 
+
+on: 
+  workflow_call:
+    inputs: 
+      instance:
+        description: 'The instance that we are going to deploy to (i.e. domain-model-staging, domain-model-sandbox)'
+        required: true
+        type: string
+
+jobs:
+  deploy_to_instance_job:
+    name: Deploy To "${{ inputs.instance }}" Job
+    env:
+      NODE_ENV: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Deploy to "${{ inputs.instance }}"
+        uses: akhileshns/heroku-deploy@v3.8.9
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_TOKEN }}
+          heroku_app_name: ${{ inputs.instance }}
+          heroku_email: ${{ secrets.SYSTEM_EMAIL }}
