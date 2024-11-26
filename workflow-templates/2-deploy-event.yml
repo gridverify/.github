@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         instance: ['domain-model-postman-staging', 'grid-domain-model-sandbox', 'grid-domain-model-staging']
-    uses: ./.github/workflows/deploy-instances.yml
+    uses: ./.github/workflows/deploy-heroku-instances.yml
     with:
       instance: ${{ matrix.instance }}
     secrets: inherit
@@ -36,7 +36,7 @@ jobs:
     strategy:
       matrix:
         instance: ['grid-domain-model', 'grid-domain-model-postman']
-    uses: ./.github/workflows/deploy-instances.yml
+    uses: ./.github/workflows/deploy-heroku-instances.yml
     with:
       instance: ${{ matrix.instance }}
     secrets: inherit
