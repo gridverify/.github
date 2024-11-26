@@ -50,10 +50,9 @@ jobs:
       TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
       SOURCE_MAPS: './dist'
 
-  Post-Prod-Release:
-    if: github.ref_name == 'production'
+  Post-Deploy:
     needs: ['Deploy-Sentry']
-    uses: ./.github/workflows/post-prod-deploy.yml
+    uses: ./.github/workflows/post-deploy.yml
     secrets: inherit
     with: 
       TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}

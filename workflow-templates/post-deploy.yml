@@ -1,4 +1,4 @@
-name: Post Prod Deploy
+name: Post Deploy
 # Post Production Deployment actions to take
 
 on:
@@ -40,6 +40,41 @@ jobs:
           tag_name: ${{ env.VERSION_NUMBER }}.${{ env.BUILD_NUMBER }}
           release_name: ${{ env.VERSION_NUMBER }} (${{ env.BUILD_NUMBER }})
 
+  post_staging_release_job:
+    # Bump the build number
+    if: github.event.pull_request.base.ref == 'main'
+    name: Post Staging Release Job
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_ENV: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GH_API_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+      - name: Authenticate with private NPM package
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      - name: Install Dependencies
+        run: npm ci
+      - name: Bump Build
+        run: npm run bump-build
+      - name: Set GitHub User
+        run: |
+          git config --global user.name "System Bot"
+          git config --global user.email "${{ secrets.SYSTEM_EMAIL }}"
+      - name: Git Push
+        run: |
+          git add package.json
+          git commit -m "Build bump by CI [skip ci]"
+          git push
+
   post_prod_release_job:
     # Bump the version number and the build number
     name: Post Prod Release Job
@@ -47,6 +82,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_ENV: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -68,7 +104,7 @@ jobs:
           npm run bump-build
       - name: Set GitHub User
         run: |
-          git config --global user.name "Grid Bot"
+          git config --global user.name "System Bot"
           git config --global user.email "${{ secrets.SYSTEM_EMAIL }}"
       - name: Git Push
         run: |

@@ -1,0 +1,5 @@
+{
+    "name": "Post Deployment",
+    "description": "Actions that should be taken after a deployment to staging or production is made such as creating GitHub tag, release, etc.",
+    "iconName": "octicon archive"
+}
