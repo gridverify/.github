@@ -13,6 +13,11 @@ on:
         description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
         required: true
         type: string
+      STAGE_NAME:
+        description: 'The name of the Heroku pipeline stage for the Review Apps.'
+        default: 'development'
+        required: false
+        type: string
 
 jobs:
   deploy_to_review_app_job:
@@ -56,7 +61,7 @@ jobs:
         run: heroku apps:create --team grid ${{ env.HEROKU_APP_NAME }}
       - name: Add Heroku App To Pipeline
         if: ${{ !env.app_exists }}
-        run: heroku pipelines:add ${{ env.PIPELINE_NAME }} --app=${{ env.HEROKU_APP_NAME }} --stage=development
+        run: heroku pipelines:add ${{ env.PIPELINE_NAME }} --app=${{ env.HEROKU_APP_NAME }} --stage=${{ inputs.STAGE_NAME }}
       - name: Copy Environment Variables To Heroku app
         if: github.event.action != 'closed'
         run: |
