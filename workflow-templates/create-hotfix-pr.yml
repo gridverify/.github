@@ -97,7 +97,7 @@ jobs:
           body: "${{ steps.template.outputs.result }} -- ${{ steps.vars.outputs.pr_body_footer }}"
           labels: |
             ci
-          assignees: grain-ci-bot
+          assignees: system-grid
 
       - name: Notify GitHub Reviewer
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
