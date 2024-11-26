@@ -13,6 +13,11 @@ on:
         description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
         required: true
         type: string
+      LABEL_TITLE:
+        description: 'The name of the label that indicates we need to create a hot fix'
+        default: 'Hot Fix Release Candidate'
+        required: false
+        type: string
         
 jobs:
   create_hotfix_pr_job:
@@ -26,33 +31,39 @@ jobs:
           github-token: ${{ secrets.GH_API_TOKEN }}
           filterOutClosed: false
           filterOutDraft: true
+
       - name: Extract HotFix Label
         id: hotfix_label_check
         run: |
-          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Hot Fix Release Candidate"* ]]; then
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ inputs.LABEL_TITLE }}"* ]]; then
             echo ::set-output name=is_hot_fix_release::true
           else
             echo ::set-output name=is_hot_fix_release::false
           fi 
+
       - name: Set GitHub User
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         run: |
-          git config --global user.name "Grid Bot"
+          git config --global user.name "System Bot"
           git config --global user.email "${{ secrets.SYSTEM_EMAIL }}"
+
       - name: Checkout Production Branch
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         uses: actions/checkout@v4
         with:
           ref: production
+
       - name: Fetch Main from Origin
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         run: |
           git fetch
           git checkout main
           git checkout production
+
       - name: Cherry Pick the Merge Commit Fix
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         run: git cherry-pick "${{ fromJSON(steps.pr_info.outputs.pr).merge_commit_sha }}" --strategy-option theirs
+
       - name: Generate Variables
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         id: vars
@@ -62,12 +73,14 @@ jobs:
           echo ::set-output name=pr_title::"$(date +%A) Hot Fix Release Candidate - $(date +%T)"
           echo ::set-output name=pr_body_footer::"This release candidate PR was ci auto-generated on $(date +%m-%d-%YT%H:%M)\
             by [create-pull-request](https://github.com/peter-evans/create-pull-request)."
+
       - name: Render PR Template
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         id: template
         uses: chuhlomin/render-template@v1.5
         with:
           template: .github/PULL_REQUEST_TEMPLATES/production-default.md
+
       - name: Create Pull Request
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         id: pr_vars
@@ -85,6 +98,7 @@ jobs:
           labels: |
             ci
           assignees: grain-ci-bot
+
       - name: Notify GitHub Reviewer
         if: ${{ steps.hotfix_label_check.outputs.is_hot_fix_release == 'true' }}
         uses: mshick/add-pr-comment@v1

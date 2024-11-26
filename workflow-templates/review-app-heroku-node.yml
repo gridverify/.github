@@ -22,7 +22,6 @@ on:
 jobs:
   deploy_to_review_app_job:
     name: Deploy To Review App Job
-    if: github.event.action != 'edited'
     runs-on: ubuntu-latest
     env:
       HEROKU_APP_NAME: review-app-pr-${{ github.event.number }}
@@ -35,17 +34,21 @@ jobs:
         with:
           fetch-depth: ${{ github.event.action == 'closed' && 1 || 0 }}
           ref: ${{ github.event.action != 'closed' && github.head_ref || '' }}
+
       - name: Setup Node
         if: github.event.action != 'closed'
         uses: actions/setup-node@v3
         with:
           node-version: '18.12.x'
           cache: 'npm'
+
       - name: Authenticate with private NPM package
         run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
       - name: Install Dependencies
         if: github.event.action != 'closed'
         run: npm ci
+
       - name: Login To Heroku
         uses: akhileshns/heroku-deploy@v3.12.12
         with:
@@ -53,30 +56,36 @@ jobs:
           heroku_email: ${{ secrets.SYSTEM_EMAIL }}
           heroku_app_name: ${{ env.HEROKU_APP_NAME }}
           justlogin: true
+
       - name: Check If Heroku App Already Exists
         run: heroku domains --app=${{ env.HEROKU_APP_NAME }} && echo "app_exists=true" >> "$GITHUB_ENV"
         continue-on-error: true
+
       - name: Create Heroku App
         if: ${{ !env.app_exists }}
         run: heroku apps:create --team grid ${{ env.HEROKU_APP_NAME }}
+
       - name: Add Heroku App To Pipeline
         if: ${{ !env.app_exists }}
         run: heroku pipelines:add ${{ env.PIPELINE_NAME }} --app=${{ env.HEROKU_APP_NAME }} --stage=${{ inputs.STAGE_NAME }}
+
       - name: Copy Environment Variables To Heroku app
         if: github.event.action != 'closed'
         run: |
           heroku config --shell --app=${{ env.TARGET_APP }} > .env
           sed -i -e 's/LIMITER_MAX=[0-9]\{1,\}/LIMITER_MAX=1000/' .env
           cat .env | tr '\n' ' ' | xargs heroku config:set --app=${{ env.HEROKU_APP_NAME }}
+
       - name: Add Heroku Remote
         if: github.event.action != 'closed'
         run: heroku git:remote --app=${{ env.HEROKU_APP_NAME }}
+
       - name: Push To Heroku
         if: github.event.action != 'closed'
         run: git push heroku ${{ github.head_ref }}:main --force
-      - name: Destroy Heroku App
-        if: github.event.action == 'closed'
-        run: heroku apps:destroy --app=${{ env.HEROKU_APP_NAME }} --confirm=${{ env.HEROKU_APP_NAME }}
+
+######## DESTROYING HEROKU REVIEW APP ########
+
       - name: Destroy Github Environment
         continue-on-error: true
         if: github.event.action == 'closed'
@@ -84,4 +93,7 @@ jobs:
         with:
           token: ${{ secrets.GH_API_TOKEN }}
           environment: ${{ env.HEROKU_APP_NAME }}
-          onlyRemoveDeployments: true
+
+      - name: Destroy Heroku App
+        if: github.event.action == 'closed'
+        run: heroku apps:destroy --app=${{ env.HEROKU_APP_NAME }} --confirm=${{ env.HEROKU_APP_NAME }}

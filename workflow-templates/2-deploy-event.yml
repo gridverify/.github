@@ -1,0 +1,60 @@
+name: Deploy Event
+
+on:
+  push:
+    branches:
+      - main
+      - production
+
+jobs: 
+  Setup-Init-CI-Vars:
+    uses: ./.github/workflows/setup-init-ci-vars.yml
+    secrets: inherit
+
+  Create-Hotfix-PR:
+    if: github.ref_name == 'main'
+    uses: ./.github/workflows/create-hotfix-pr.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Deploy-Staging:
+    if: github.ref_name == 'main'
+    needs: ['Setup-Init-CI-Vars']
+    strategy:
+      matrix:
+        instance: ['domain-model-postman-staging', 'grid-domain-model-sandbox', 'grid-domain-model-staging']
+    uses: ./.github/workflows/deploy-instances.yml
+    with:
+      instance: ${{ matrix.instance }}
+    secrets: inherit
+
+  Deploy-Production:
+    if: github.ref_name == 'production'
+    needs: ['Setup-Init-CI-Vars']
+    strategy:
+      matrix:
+        instance: ['grid-domain-model', 'grid-domain-model-postman']
+    uses: ./.github/workflows/deploy-instances.yml
+    with:
+      instance: ${{ matrix.instance }}
+    secrets: inherit
+
+  Deploy-Sentry:
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/deploy-sentry.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+      SOURCE_MAPS: './dist'
+
+  Post-Prod-Release:
+    if: github.ref_name == 'production'
+    needs: ['Deploy-Sentry']
+    uses: ./.github/workflows/post-prod-deploy.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}

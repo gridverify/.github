@@ -1,0 +1,20 @@
+name: Schedule Release Candidate Event
+# Schedule a release candidate from main to production on a schedule
+
+on:
+  schedule:
+    - cron: '50 21 * * 2' #Tuesdays, 2:50pm PST
+
+jobs: 
+  Setup-Init-CI-Vars:
+    uses: ./.github/workflows/setup-init-ci-vars.yml
+    secrets: inherit
+
+  Create-Release-Candidate:
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/create-release-candidate.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+      NEXT_RELEASE_DAYS: '2' # tuesdays

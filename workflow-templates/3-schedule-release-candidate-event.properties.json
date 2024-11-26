@@ -1,0 +1,10 @@
+{
+    "name": "Actions on Scheduled Release Candidates",
+    "description": "Run series of actions when a release candidate is scheduled to be staged",
+    "iconName": "octicon number",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

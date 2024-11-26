@@ -14,7 +14,8 @@ on:
         type: string
       NEXT_RELEASE_DAYS:
         description: 'The days of the week that the release candidate is created on. See https://github.com/marketplace/actions/next-release-date for valid input options.'
-        required: true
+        default: '2'
+        required: false
         type: string
 
 jobs:
@@ -60,10 +61,10 @@ jobs:
           template: .github/PULL_REQUEST_TEMPLATES/production-default.md
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5.0.2
+        uses: peter-evans/create-pull-request@v7.0.5
         with:
-          committer: Grid Bot <${{ secrets.SYSTEM_EMAIL }}>
-          author: Grid Bot <${{ secrets.SYSTEM_EMAIL }}>
+          committer: System Bot <${{ secrets.SYSTEM_EMAIL }}>
+          author: System Bot <${{ secrets.SYSTEM_EMAIL }}>
           token: ${{ secrets.GH_API_TOKEN }}
           branch: ${{ steps.vars.outputs.pr_branch_name }}
           delete-branch: true
@@ -74,6 +75,7 @@ jobs:
           labels: |
             ci
           assignees: system-grid
+          team-reviewers: release-managers
 
       - name: Close RC Milestone 
         uses: Beakyn/gha-close-milestone@v1.1.1
@@ -92,14 +94,9 @@ jobs:
         with:
           ref: ${{ steps.vars.outputs.pr_branch_name }}
 
-      - name: Setup SSH Keys
-        uses: webfactory/ssh-agent@v0.4.1
-        with:
-          ssh-private-key: ${{ secrets.SYSTEM_ACCOUNT_PRIVATE_KEY }}
-
       - name: Set GitHub User
         run: |
-          git config --global user.name "Grid Bot"
+          git config --global user.name "System Bot"
           git config --global user.email "${{ secrets.SYSTEM_EMAIL }}"
 
       - name: Fix Conflicts & Push
@@ -130,7 +127,7 @@ jobs:
         id: vars
         uses: cketant/next-release-date@v1.0.2
         with:
-          releaseDays: "2"
+          releaseDays: ${{ inputs.NEXT_RELEASE_DAYS }}
 
       - name: Milestone Vars
         id: milestone_vars

@@ -5,6 +5,8 @@
 // NEED TO INSTALL FOLLOWING NPM PACKAGES: 
 // • semver
 // • simple-git
+//
+// This should usually be placed in the "bin" directory
 
 const semver = require('semver')
 const fs = require('fs')

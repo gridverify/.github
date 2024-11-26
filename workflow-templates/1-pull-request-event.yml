@@ -1,0 +1,40 @@
+name: Pull Request Event
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, closed]
+    branches-ignore: 
+      - 'production'
+
+jobs: 
+  Setup-Init-CI-Vars:
+    uses: ./.github/workflows/setup-init-ci-vars.yml
+    secrets: inherit
+
+  Welcome-New-Contributor:
+    if: github.event.action == 'opened'
+    uses: ./.github/workflows/welcome-new-contributor.yml
+    secrets: inherit
+
+  Check-Pull-Request:
+    if: github.event.action != 'closed'
+    uses: ./.github/workflows/check-pr.yml
+    secrets: inherit
+
+  Build-Lint-Test:
+    if: github.event.action != 'edited' && github.event.action != 'closed'
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/build-lint-test.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Review-App-Heroku: # Deletes the Review App on 'closed' event type
+    if: github.event.action != 'edited'
+    needs: ['Setup-Init-CI-Vars', 'Build-Lint-Test']
+    uses: ./.github/workflows/heroku-review-app.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}

@@ -1,0 +1,23 @@
+name: Welcome New Contributor
+
+on:
+  workflow_call:
+    inputs:
+      MESSAGE:
+        description: 'The welcome message to the new contributor'
+        default: 'Hello there, thanks for opening your first Pull Request. Someone will review it soon'
+        required: false
+        type: string
+
+jobs:
+  welcome_new_contributor_job:
+    name: Welcome New Contributor Job
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Welcome
+        uses: garg3133/welcome-new-contributors@v1.2
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+          is-oauth-token: true
+          issue-message: ${{ inputs.MESSAGE }}
+          pr-message: ${{ inputs.MESSAGE }}

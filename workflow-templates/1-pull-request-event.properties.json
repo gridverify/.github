@@ -1,0 +1,10 @@
+{
+    "name": "Actions on Pull Request",
+    "description": "Run series of actions when a pull request is created and acted upon.",
+    "iconName": "octicon number",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

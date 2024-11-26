@@ -1,0 +1,10 @@
+{
+    "name": "Actions on Deploy Event",
+    "description": "Run series of actions a commit is pushed to main or production branches.",
+    "iconName": "octicon number",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}
