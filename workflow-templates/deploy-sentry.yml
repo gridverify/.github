@@ -12,6 +12,11 @@ on:
         description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
         required: true
         type: string
+      SOURCE_MAPS:
+        description: 'Space-separated list of paths to JavaScript sourcemaps to symbolicate crashes, erorrs, etc. This should be the folder where the build outputs everything.'
+        default: './dist'
+        required: false
+        type: string
 
 jobs:
   release_in_sentry_job:
@@ -74,5 +79,5 @@ jobs:
           version: ${{ secrets.SENTRY_PROJECT }}@${{ env.version_number }}+${{env.build_number}}
           finalize: true
           set_commits: auto
-          sourcemaps: ./dist
+          sourcemaps: ${{ inputs.SOURCE_MAPS }}
           ignore_empty: true
