@@ -15,7 +15,7 @@ on:
 
 jobs:
   tag_release_job:
-    if: github.event.pull_request.base.ref == 'production'
+    if: github.ref_name == 'production'
     name: Tag & Release Prod Job
     env:
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
@@ -42,7 +42,7 @@ jobs:
 
   post_staging_release_job:
     # Bump the build number
-    if: github.event.pull_request.base.ref == 'main'
+    if: github.ref_name == 'main'
     name: Post Staging Release Job
     env:
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
