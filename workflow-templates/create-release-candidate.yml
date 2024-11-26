@@ -75,7 +75,6 @@ jobs:
           labels: |
             ci
           assignees: system-grid
-          team-reviewers: release-managers
 
       - name: Close RC Milestone 
         uses: Beakyn/gha-close-milestone@v1.1.1
