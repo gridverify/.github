@@ -23,6 +23,7 @@ jobs:
     if: github.ref_name == 'main'
     needs: ['Setup-Init-CI-Vars']
     strategy:
+      fail-fast: false
       matrix:
         instance: ['domain-model-postman-staging', 'grid-domain-model-sandbox', 'grid-domain-model-staging']
     uses: ./.github/workflows/deploy-heroku-instances.yml
@@ -34,6 +35,7 @@ jobs:
     if: github.ref_name == 'production'
     needs: ['Setup-Init-CI-Vars']
     strategy:
+      fail-fast: false
       matrix:
         instance: ['grid-domain-model', 'grid-domain-model-postman']
     uses: ./.github/workflows/deploy-heroku-instances.yml
