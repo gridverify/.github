@@ -1,0 +1,5 @@
+{
+    "name": "Destroy the Heroku Review App",
+    "description": "Destroy the Heroku Review App since the PR is closed",
+    "iconName": "octicon rocket"
+}

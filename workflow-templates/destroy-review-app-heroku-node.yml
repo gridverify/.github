@@ -1,0 +1,52 @@
+name: Destroy Review App Heroku Node
+# Create and deploy a branch to a Heroku Review App according to the PR. This is for 
+# NodeJS based apps.
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+      STAGE_NAME:
+        description: 'The name of the Heroku pipeline stage for the Review Apps.'
+        default: 'development'
+        required: false
+        type: string
+
+jobs:
+  destroy_review_app_job:
+    name: Destroy Review App Job
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_APP_NAME: review-app-pr-${{ github.event.number }}
+      PIPELINE_NAME: ${{ secrets.HEROKU_PIPELINE_NAME }}
+    steps:
+      - name: Login To Heroku
+        uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_TOKEN }}
+          heroku_email: ${{ secrets.SYSTEM_EMAIL }}
+          heroku_app_name: ${{ env.HEROKU_APP_NAME }}
+          justlogin: true
+
+      - name: Check If Heroku App Already Exists
+        run: heroku domains --app=${{ env.HEROKU_APP_NAME }} && echo "app_exists=true" >> "$GITHUB_ENV"
+        continue-on-error: true
+
+      - name: Destroy Github Environment
+        if: ${{ env.app_exists }}
+        continue-on-error: true
+        uses: strumwolf/delete-deployment-environment@v3.0.0
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+          environment: ${{ env.HEROKU_APP_NAME }}
+
+      - name: Destroy Heroku App
+        if: ${{ env.app_exists }}
+        run: heroku apps:destroy --app=${{ env.HEROKU_APP_NAME }} --confirm=${{ env.HEROKU_APP_NAME }}

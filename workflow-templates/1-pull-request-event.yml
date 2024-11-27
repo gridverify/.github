@@ -30,10 +30,19 @@ jobs:
       TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
       TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
 
-  Review-App-Heroku: # Deletes the Review App on 'closed' event type
+  Review-App-Heroku:
     if: github.event.action != 'edited'
     needs: ['Setup-Init-CI-Vars', 'Build-Lint-Test']
-    uses: ./.github/workflows/heroku-review-app.yml
+    uses: ./.github/workflows/review-app-heroku-node.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Destroy-Review-App-Heroku:
+    if: github.event.action == 'closed'
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/destroy-review-app-heroku-node.yml
     secrets: inherit
     with: 
       TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}

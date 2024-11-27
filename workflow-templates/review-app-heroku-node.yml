@@ -31,12 +31,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: ${{ github.event.action == 'closed' && 1 || 0 }}
-          ref: ${{ github.event.action != 'closed' && github.head_ref || '' }}
 
       - name: Setup Node
-        if: github.event.action != 'closed'
         uses: actions/setup-node@v3
         with:
           node-version: '18.12.x'
@@ -46,7 +42,6 @@ jobs:
         run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
 
       - name: Install Dependencies
-        if: github.event.action != 'closed'
         run: npm ci
 
       - name: Login To Heroku
@@ -70,30 +65,13 @@ jobs:
         run: heroku pipelines:add ${{ env.PIPELINE_NAME }} --app=${{ env.HEROKU_APP_NAME }} --stage=${{ inputs.STAGE_NAME }}
 
       - name: Copy Environment Variables To Heroku app
-        if: github.event.action != 'closed'
         run: |
           heroku config --shell --app=${{ env.TARGET_APP }} > .env
           sed -i -e 's/LIMITER_MAX=[0-9]\{1,\}/LIMITER_MAX=1000/' .env
           cat .env | tr '\n' ' ' | xargs heroku config:set --app=${{ env.HEROKU_APP_NAME }}
 
       - name: Add Heroku Remote
-        if: github.event.action != 'closed'
         run: heroku git:remote --app=${{ env.HEROKU_APP_NAME }}
 
       - name: Push To Heroku
-        if: github.event.action != 'closed'
         run: git push heroku ${{ github.head_ref }}:main --force
-
-######## DESTROYING HEROKU REVIEW APP ########
-
-      - name: Destroy Github Environment
-        continue-on-error: true
-        if: github.event.action == 'closed'
-        uses: strumwolf/delete-deployment-environment@v3.0.0
-        with:
-          token: ${{ secrets.GH_API_TOKEN }}
-          environment: ${{ env.HEROKU_APP_NAME }}
-
-      - name: Destroy Heroku App
-        if: github.event.action == 'closed'
-        run: heroku apps:destroy --app=${{ env.HEROKU_APP_NAME }} --confirm=${{ env.HEROKU_APP_NAME }}
