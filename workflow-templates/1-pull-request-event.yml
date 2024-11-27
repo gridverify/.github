@@ -3,8 +3,6 @@ name: Pull Request Event
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, closed]
-    branches-ignore: 
-      - 'production'
 
 jobs: 
   Setup-Init-CI-Vars:
@@ -17,12 +15,12 @@ jobs:
     secrets: inherit
 
   Check-Pull-Request:
-    if: github.event.action != 'closed'
+    if: github.event.action == 'opened' || github.event.action == 'edited'
     uses: ./.github/workflows/check-pr.yml
     secrets: inherit
 
   Build-Lint-Test:
-    if: github.event.action != 'edited' && github.event.action != 'closed'
+    if: github.event.action != 'edited' || github.event.action != 'closed'
     needs: ['Setup-Init-CI-Vars']
     uses: ./.github/workflows/build-lint-test.yml
     secrets: inherit
@@ -31,7 +29,7 @@ jobs:
       TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
 
   Review-App-Heroku:
-    if: github.event.action != 'edited'
+    if: github.event.action != 'edited' || github.event.action != 'closed'
     needs: ['Setup-Init-CI-Vars', 'Build-Lint-Test']
     uses: ./.github/workflows/review-app-heroku-node.yml
     secrets: inherit
