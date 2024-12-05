@@ -1,0 +1,33 @@
+name: Check Branch
+# Check that the Branch follows organization standards and meets specifications.
+
+on: 
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: false
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: false
+        type: string
+
+jobs: 
+  check_branch_title_format_job:
+    name: Check Branch Title Format Job
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: deepakputhraya/action-branch-name@master
+        with:
+          regex: '^sc-\d+\/[a-zA-Z\d-]+' # Regex that the branch should match.
+          min_length: 9
+      - name: Comment On Job Fail
+        if: failure()
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please rename your branch using this format `sc-<STORY_ID>/branch-name-goes-here` for example `sc-0123/example-branch-for-you`.

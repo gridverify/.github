@@ -1,0 +1,5 @@
+{
+    "name": "Branch Checks",
+    "description": "Run a series of general Branch checks that ensure the Branch is to the organization standard and format.",
+    "iconName": "octicon copilot"
+}

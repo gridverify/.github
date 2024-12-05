@@ -19,6 +19,11 @@ jobs:
     uses: ./.github/workflows/check-pr.yml
     secrets: inherit
 
+  Check-Branch:
+    if: ${{ github.event.action != 'synchronize' && github.event.action != 'closed' && github.base_ref == 'main' }}
+    uses: ./.github/workflows/check-branch.yml
+    secrets: inherit
+
   Build-Lint-Test:
     if: ${{ github.event.action != 'edited' && github.event.action != 'closed' }}
     needs: ['Setup-Init-CI-Vars']
