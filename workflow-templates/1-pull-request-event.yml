@@ -15,7 +15,7 @@ jobs:
     secrets: inherit
 
   Check-Pull-Request:
-    if: ${{ github.event.action != 'synchronize' && github.event.action != 'closed' }}
+    if: ${{ github.event.action != 'synchronize' && github.event.action != 'closed' && github.base_ref == 'main' }}
     uses: ./.github/workflows/check-pr.yml
     secrets: inherit
 
