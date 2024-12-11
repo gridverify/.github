@@ -11,7 +11,6 @@
 3. *<Step 3>*
 
 ## Checklist Before Merging
- - [ ] Have screenshots and/or screen recordings been added (*if applicable*)?
  - [ ] Does a *Specialist Reviewer* need to review this PR?
     - If so apply the **Specialist Review Required** label and tag the specific *Reviewer*
  - [ ] Have all environment variables (*if any*) been added to any associated frontend projects sandbox, staging, and production instance?
