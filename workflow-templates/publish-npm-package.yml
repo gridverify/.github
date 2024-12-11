@@ -1,0 +1,61 @@
+name: Publish NPM Package
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+    outputs:
+      PACKAGE_NAME:
+        description: 'Name of the package as its listed in the package.json file as a package'
+        value: ${{ jobs.publish_npm_package_job.outputs.PACKAGE_NAME }}
+
+jobs:
+  publish_npm_package_job:
+    name: Publish NPM Package Job
+    runs-on: ubuntu-latest
+    outputs:
+      PACKAGE_NAME: ${{ steps.outs.outputs.PACKAGE_NAME }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+
+      - name: Authenticate with private NPM package
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
+      - name: Install Dependencies
+        run: npm install
+        working-directory: ./
+
+      - name: Install Package Dependencies
+        run: npm install
+        working-directory: ./src
+
+      - name: Reset .npmrc File # We don't want to check in the NPM token by accident
+        run: git checkout .npmrc
+        working-directory: ./
+
+      - name: Publish
+        run: npm publish --access=restricted
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: ./src
+
+      - name: Set Outputs
+        id: outs
+        run: |
+          sudo apt-get install jq
+          echo "PACKAGE_NAME=$(jq -r '.name' package.json)" >> $GITHUB_OUTPUT
+        working-directory: ./src
+

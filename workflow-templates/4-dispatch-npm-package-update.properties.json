@@ -1,0 +1,10 @@
+{
+    "name": "Dispatch NPM Package Update",
+    "description": "Received a dispatch signal via webhook to repository to update one of their dependencies",
+    "iconName": "octicon git-pull-request",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "name": "Integration Tests for NestJS Projects",
+    "description": "Run integration test based on Review App on PR",
+    "iconName": "octicon copilot",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

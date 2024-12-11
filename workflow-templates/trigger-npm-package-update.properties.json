@@ -1,0 +1,5 @@
+{
+    "name": "Trigger NPM Package Update",
+    "description": "Trigger via webhook for repos to update one of their npm dependencies",
+    "iconName": "octicon rocket"
+}

@@ -1,0 +1,115 @@
+name: Pre Publish
+# Before publishing package
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+
+jobs:
+
+  pre_publish_job:
+    name: Pre Publish Job
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+          cache: 'npm'
+
+      - name: Authenticate with private NPM package
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Get PR for push
+        uses: 8BitJonny/gh-get-current-pr@3.0.0
+        id: pr_info
+        with:
+          filterOutClosed: false
+          filterOutDraft: true
+
+      - name: Extract Bump Label
+        id: bump_label_check
+        run: |
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Bump Patch"* ]]; then
+            echo ::set-output name=bump_label::patch
+          elif [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Bump Minor"* ]]; then
+            echo ::set-output name=bump_label::minor
+          elif [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Bump Major"* ]]; then
+            echo ::set-output name=bump_label::major
+          else
+            echo ::set-output name=bump_label::patch
+          fi 
+
+      - name: Get latest published package version from npm
+        id: latest_version
+        run: |
+          sudo apt-get install jq
+          PACKAGE_NAME="$(jq -r '.name' src/package.json)"
+          echo ::set-output name=number::$(npm view ${PACKAGE_NAME} version)
+        working-directory: ./
+
+      - name: Set the version number to latest from npm
+        run: |
+          npm run set-version ${{ steps.latest_version.outputs.number }}
+        working-directory: ./src
+
+      - name: Bump the package version and build
+        run: |
+          if [[ "${{ steps.bump_label_check.outputs.bump_label }}" == *"patch"* ]]; then
+            npm run bump-patch
+          elif [[ "${{ steps.bump_label_check.outputs.bump_label }}" == *"minor"* ]]; then
+            npm run bump-minor
+          elif [[ "${{ steps.bump_label_check.outputs.bump_label }}" == *"major"* ]]; then
+            npm run bump-major
+          else
+            npm run bump-patch
+          fi 
+          npm run bump-build
+        working-directory: ./src
+
+      - name: Get the package version and build
+        id: package_vars
+        run: |
+          sudo apt-get install jq
+          echo ::set-output name=build_number::"$(jq -r '.build' package.json)"
+          echo ::set-output name=version_number::"$(jq -r '.version' package.json)"
+        working-directory: ./src
+
+      - name: Match the project version and build to package version and build
+        run: |
+          npm run set-build ${{ steps.package_vars.outputs.build_number }}
+          npm run set-version ${{ steps.package_vars.outputs.version_number }}
+        working-directory: ./
+
+      - name: Set GitHub User
+        run: |
+          git config --global user.name "System Bot"
+          git config --global user.email "${{ secrets.SYSTEM_EMAIL }}"
+
+      - name: Reset .npmrc File # We don't want to check in the NPM token by accident
+        run: git checkout .npmrc
+        working-directory: ./
+
+      - name: Git Push
+        run: |
+          git add package.json
+          git add src/package.json
+          git commit -m "Version and Build bump by CI [skip ci]"
+          git push

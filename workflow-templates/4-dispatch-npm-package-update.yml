@@ -1,0 +1,71 @@
+name: Dispatch NPM Package Update
+# Receive a dispatch signal (webhook) to update a npm package from another repo
+
+on:
+  repository_dispatch:
+    types: [trigger-package-update]
+
+jobs:
+
+  dispatch_package_update_job:
+    name: Dispatch Package Update Job
+    env:
+      SHORTCUT_NUMBER: 2495 # The default Shortcut story for this candidate PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+          cache: 'npm'
+
+      - name: Authenticate with private NPM package
+        env:
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
+      - name: Update package
+        run: |
+          if [ -z "${{ github.event.client_payload.package_version }}" ]; then
+            npm install "${{ github.event.client_payload.package_name }}@latest"
+          else
+            npm install "${{ github.event.client_payload.package_name }}@${{ github.event.client_payload.package_version }}"
+          fi
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Reset .npmrc File # We don't want to check in the NPM token
+        run: git checkout .npmrc
+
+      - name: Generate Variables
+        id: vars
+        run: |
+          echo ::set-output name=pr_branch_name::"sc-${{ env.SHORTCUT_NUMBER }}/auto-pr-$(TZ=":US/Eastern" date +%s)"
+          echo ::set-output name=comm_mess::"$(date +%A) Package Version Update $(TZ=":US/Eastern" date +%m-%d-%Y) - Trigger CI Checks"
+          echo ::set-output name=pr_title::"[sc-${{ env.SHORTCUT_NUMBER }}] Package Version Update Candidate PR - $(TZ=":US/Eastern" date +%m-%d-%Y)"
+          echo ::set-output name=pr_body_footer::"This PR was ci auto-generated on $(TZ=":US/Eastern" date +%m-%d-%YT%H:%M)EST\
+            by [create-pull-request](https://github.com/peter-evans/create-pull-request)."
+          echo ::set-output name=repo_owner::${GITHUB_REPOSITORY_OWNER}
+          echo ::set-output name=repo_name::${GITHUB_REPOSITORY#*/}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7.0.5
+        with:
+          committer: System Bot <${{ secrets.SYSTEM_EMAIL }}>
+          author: System Bot <${{ secrets.SYSTEM_EMAIL }}>
+          token: ${{ secrets.GH_API_TOKEN }}
+          branch: ${{ steps.vars.outputs.pr_branch_name }}
+          delete-branch: true
+          commit-message: ${{ steps.vars.outputs.comm_mess }}
+          title: ${{ steps.vars.outputs.pr_title }}
+          body: "This pull request candidate was created because the private NPM package **${{ github.event.client_payload.package_name }}**, a dependency of this project, was recently updated with a new version. See source diff for more details.\n\n\n*${{ steps.vars.outputs.pr_body_footer }}*"
+          labels: |
+            ci
+          assignees: system-grid
+          team-reviewers: backend

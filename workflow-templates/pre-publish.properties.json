@@ -1,0 +1,5 @@
+{
+    "name": "Prepare project for a NPM publish",
+    "description": "Prepare a project for a NPM publish by updating version and build numbers.",
+    "iconName": "octicon rocket"
+}

@@ -1,0 +1,5 @@
+{
+    "name": "Publish NPM Package",
+    "description": "Publish NPM package.",
+    "iconName": "octicon rocket"
+}
