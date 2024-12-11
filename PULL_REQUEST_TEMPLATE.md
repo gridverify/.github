@@ -16,3 +16,5 @@
  - [ ] Have all environment variables (*if any*) been added to any associated frontend projects sandbox, staging, and production instance?
    - If so apply the **Env Variable Change Needed** label
  - [ ] Have any unit tests been written (*if applicable*)?
+ - [ ] Does this need to be deployed to production as a **Hotfix**?
+   - If so apply the **Hot Fix Release Candidate** label
