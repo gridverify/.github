@@ -37,7 +37,7 @@ jobs:
     name: Trigger Package Update Job
     runs-on: ubuntu-latest
     env:
-      EVENT_TYPE: trigger-package-update
+      EVENT_TYPE: trigger-npm-package-update
     steps:
       - name: Trigger Package Update
         run: |

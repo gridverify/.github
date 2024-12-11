@@ -3,7 +3,7 @@ name: Webhook Update NPM Package
 
 on:
   repository_dispatch:
-    types: [trigger-package-update]
+    types: [trigger-npm-package-update]
 
 jobs: 
   Setup-Init-CI-Vars:
