@@ -1,0 +1,10 @@
+{
+    "name": "Actions on Webhook for updating npm package",
+    "description": "Received a dispatch signal via webhook to repository to update one of their dependencies",
+    "iconName": "octicon number",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

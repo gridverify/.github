@@ -2,8 +2,16 @@ name: Dispatch NPM Package Update
 # Receive a dispatch signal (webhook) to update a npm package from another repo
 
 on:
-  repository_dispatch:
-    types: [trigger-package-update]
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
 
 jobs:
 

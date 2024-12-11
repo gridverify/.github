@@ -1,0 +1,19 @@
+name: Webhook Update NPM Package
+# Received a webhook to update NPM package
+
+on:
+  repository_dispatch:
+    types: [trigger-package-update]
+
+jobs: 
+  Setup-Init-CI-Vars:
+    uses: ./.github/workflows/setup-init-ci-vars.yml
+    secrets: inherit
+
+  Update-NPM-Package:
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/dispatch-npm-package-update.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
