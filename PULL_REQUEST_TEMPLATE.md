@@ -11,15 +11,9 @@
 3. *<Step 3>*
 
 ## Checklist Before Merging
- - [ ] Is this PR linked to a story?
- - [ ] Have all required checks passed?
  - [ ] Have screenshots and/or screen recordings been added (*if applicable*)?
- - [ ] Has someone from *Design* reviewed any UI changes or updates (*if applicable*)?
- - [ ] Does this PR need to be rolled out in sync with Backend changes?
-    - If so apply the **Backend Dependency** label
  - [ ] Does a *Specialist Reviewer* need to review this PR?
     - If so apply the **Specialist Review Required** label and tag the specific *Reviewer*
- - [ ] Have any unit tests been written (*if applicable*)?
- - [ ] Have all environment variables (*if any*) been added to any associated frontend projects staging and production instance?
+ - [ ] Have all environment variables (*if any*) been added to any associated frontend projects sandbox, staging, and production instance?
    - If so apply the **Env Variable Change Needed** label
  - [ ] Have any unit tests been written (*if applicable*)?
