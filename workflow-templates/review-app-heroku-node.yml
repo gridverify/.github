@@ -61,7 +61,7 @@ jobs:
 
       - name: Create Heroku App
         if: ${{ !env.app_exists }}
-        run: heroku apps:create --team grid ${{ env.HEROKU_APP_NAME }}
+        run: heroku apps:create ${{ env.HEROKU_APP_NAME }} --team=grid --addons=papertrail
 
       - name: Add Heroku App To Pipeline
         if: ${{ !env.app_exists }}
@@ -78,3 +78,8 @@ jobs:
 
       - name: Push To Heroku
         run: git push heroku ${{ github.head_ref }}:main --force
+
+      # IF NEEDED:
+      # - name: Scale Dyno Type # Put this at the end to give the dyno time
+      #   if: ${{ !env.app_exists }}
+      #   run: heroku ps:scale web=1:Standard-2x --app=${{ env.HEROKU_APP_NAME }}
