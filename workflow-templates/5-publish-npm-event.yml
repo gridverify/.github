@@ -1,0 +1,61 @@
+name: Deploy Event
+
+on:
+  push:
+    branches:
+      - main
+
+jobs: 
+
+  Setup-Init-CI-Vars:
+    uses: ./.github/workflows/setup-init-ci-vars.yml
+    secrets: inherit
+
+  Pre-Publish:
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/pre-publish.yml
+    secrets: inherit
+    with:
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Tag-Release:
+    needs: ['Setup-Init-CI-Vars', 'Pre-Publish']
+    uses: ./.github/workflows/tag-release.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Publish-Package:
+    needs: ['Setup-Init-CI-Vars', 'Tag-Release']
+    uses: ./.github/workflows/publish-npm-package.yml
+    secrets: inherit
+    with:
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Deploy-Sentry:
+    needs: ['Setup-Init-CI-Vars','Tag-Release']
+    uses: ./.github/workflows/deploy-sentry.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+      SOURCE_MAPS: './dist'
+
+  Trigger-NPM-Package-Updates:
+    needs: ['Setup-Init-CI-Vars', 'Tag-Release', 'Publish-Package']
+    strategy:
+      fail-fast: false
+      matrix:
+        repo_name: ['agents', 'orchestrator', 'api-gateway']
+    uses: ./.github/workflows/trigger-npm-package-update.yml
+    secrets: inherit
+    with:
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+      TARGET_REPO_OWNER: 'gridverify'
+      TARGET_REPO_NAME: ${{ matrix.repo_name }}
+      PACKAGE_NAME: ${{ needs.Publish-Package.outputs.PACKAGE_NAME }}
+      PACKAGE_VERSION: ${{ needs.Tag-Release.outputs.RELEASE_VERSION }}

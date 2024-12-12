@@ -1,0 +1,10 @@
+{
+    "name": "Actions for publishing npm package",
+    "description": "After push to main then publish npm package to registry",
+    "iconName": "octicon number",
+    "categories": [
+        "TypeScript",
+        "JavaScript",
+        "Express"
+    ]
+}

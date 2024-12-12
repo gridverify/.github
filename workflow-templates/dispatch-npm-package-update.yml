@@ -77,3 +77,4 @@ jobs:
             ci
           assignees: system-grid
           team-reviewers: backend
+          reviewers: ${{ github.event.client_payload.origin_author }}
