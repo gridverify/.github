@@ -37,9 +37,55 @@ jobs:
     name: Trigger Package Update Job
     runs-on: ubuntu-latest
     env:
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       EVENT_TYPE: trigger-npm-package-update
+      PR_AGENTS: pr-agents
+      PR_ORCHESTRATOR: pr-orchestrator
+      PR_API_GATEWAY: pr-api-gateway
     steps:
+      - name: Get PR for push
+        uses: 8BitJonny/gh-get-current-pr@3.0.0
+        id: pr_info
+        with:
+          filterOutClosed: false
+          filterOutDraft: true
+
+      - name: Extract By Pass Labels
+        id: bypass_labels
+        run: |
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ env.PR_AGENTS }}"* ]]; then
+            echo ::set-output name=is_pr_agents::true
+          else
+            echo ::set-output name=is_pr_agents::false
+          fi 
+
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ env.PR_ORCHESTRATOR }}"* ]]; then
+            echo ::set-output name=is_pr_orchestrator::true
+          else
+            echo ::set-output name=is_pr_orchestrator::false
+          fi 
+
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ env.PR_API_GATEWAY }}"* ]]; then
+            echo ::set-output name=is_pr_api_gateway::true
+          else
+            echo ::set-output name=is_pr_api_gateway::false
+          fi 
+
+      - name: Determine If We Create Candidate PRs
+        id: bypass
+        run: |
+          if [[ "${{ inputs.TARGET_REPO_NAME }}" == *"agents"* ]] && [[ "${{ steps.bypass_labels.outputs.is_pr_agents }}" == *"true"* ]]; then
+            echo ::set-output name=is_pr::true
+          elif [[ "${{ inputs.TARGET_REPO_NAME }}" == *"orchestrator"* ]] && [[ "${{ steps.bypass_labels.outputs.is_pr_orchestrator }}" == *"true"* ]]; then
+            echo ::set-output name=is_pr::true
+          elif [[ "${{ inputs.TARGET_REPO_NAME }}" == *"api-gateway"* ]] && [[ "${{ steps.bypass_labels.outputs.is_pr_api_gateway }}" == *"true"* ]]; then
+            echo ::set-output name=is_pr::true
+          else
+            echo ::set-output name=is_pr::false
+          fi 
+
       - name: Trigger Package Update
+        if: ${{ steps.bypass.outputs.is_pr == 'true' }}
         run: |
           curl -L \
             -X POST \
