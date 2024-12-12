@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_API_TOKEN }}
+          ref: main
 
       - name: Remove checked-in .npmrc
         run: rm .npmrc # We let the "actions/setup-node" setup the .npmrc globally

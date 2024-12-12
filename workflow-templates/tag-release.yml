@@ -29,6 +29,9 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+          ref: main
 
       - name: Get Vars
         run: |

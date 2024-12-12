@@ -25,48 +25,59 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+          ref: main
+
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: '18.12.x'
           cache: 'npm'
+
       - name: Authenticate with private NPM package
         env:
           NPM_TOKEN: ${{ env.NPM_TOKEN }}
         run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
       - name: Install Dependencies
         run: npm ci
+
       - name: Login To Heroku + Build Server
         id: build
         env:
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
           HEROKU_API_TOKEN: ${{ secrets.HEROKU_API_TOKEN }}
           NODE_ENV: ${{ inputs.TARGET_ENV }}
-          NPM_TOKEN: ${{ env.NPM_TOKEN }}
         run: |
           HEROKU_API_KEY=$HEROKU_API_TOKEN heroku config -a ${{ inputs.TARGET_APP }} > env.yaml 
           for keyval in $(grep -E ':\s+' env.yaml | sed -e 's/: */=/'); do
             echo $keyval >> .env
           done
           npm run build --loglevel error
+
       - name: Read Build From package.json
         id: build-number
         uses: notiz-dev/github-action-json-property@release
         with:
           path: 'package.json'
           prop_path: 'build'
+
       - name: Store Build Number
         run: |
           echo "build_number=${{steps.build-number.outputs.prop}}" >> $GITHUB_ENV
+
       - name: Read Version From package.json
         id: version-number
         uses: notiz-dev/github-action-json-property@release
         with:
           path: 'package.json'
           prop_path: 'version'
+
       - name: Store Version Number
         run: |
           echo "version_number=${{steps.version-number.outputs.prop}}" >> $GITHUB_ENV
+
       - name: Create Sentry Release
         uses: getsentry/action-release@v1.7.0
         env:

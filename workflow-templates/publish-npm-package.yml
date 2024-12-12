@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_API_TOKEN }}
+          ref: main
 
       - name: Remove checked-in .npmrc
         run: rm .npmrc # We let the "actions/setup-node" setup the .npmrc globally
@@ -62,4 +63,3 @@ jobs:
           sudo apt-get install jq
           echo "PACKAGE_NAME=$(jq -r '.name' package.json)" >> $GITHUB_OUTPUT
         working-directory: ./src
-
