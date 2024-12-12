@@ -21,18 +21,25 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      BUMP_MAJOR: bump-major
+      BUMP_MINOR: bump-minor
+      BUMP_PATCH: bump-patch
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+
+      - name: Remove checked-in .npmrc
+        run: rm .npmrc # We let the "actions/setup-node" setup the .npmrc globally
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18.12.x'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
-
-      - name: Authenticate with private NPM package
-        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
 
       - name: Install Dependencies
         run: npm install
@@ -47,30 +54,37 @@ jobs:
       - name: Extract Bump Label
         id: bump_label_check
         run: |
-          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Bump Patch"* ]]; then
+          if [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ env.BUMP_PATCH }}"* ]]; then
             echo ::set-output name=bump_label::patch
-          elif [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Bump Minor"* ]]; then
+          elif [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ env.BUMP_MINOR }}"* ]]; then
             echo ::set-output name=bump_label::minor
-          elif [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"Bump Major"* ]]; then
+          elif [[ "${{ steps.pr_info.outputs.pr_labels }}" == *"${{ env.BUMP_MAJOR }}"* ]]; then
             echo ::set-output name=bump_label::major
           else
             echo ::set-output name=bump_label::patch
           fi 
 
-      - name: Get latest published package version from npm
+      - name: Get latest published package version from npm registry # check if greater than 0
         id: latest_version
         run: |
           sudo apt-get install jq
           PACKAGE_NAME="$(jq -r '.name' src/package.json)"
-          echo ::set-output name=number::$(npm view ${PACKAGE_NAME} version)
-        working-directory: ./
+          ARRAY_VERSIONS_JSON=$(npm view ${PACKAGE_NAME} versions --json) # Get all the versions in order in array
+          ARRAY_LENGTH=$(echo $ARRAY_VERSIONS_JSON | jq length) 
+          LATEST_VERSION="0.0.0"
 
-      - name: Set the version number to latest from npm
-        run: |
-          npm run set-version ${{ steps.latest_version.outputs.number }}
-        working-directory: ./src
+          if [ $ARRAY_LENGTH -gt 0 ]; then
+            LATEST_VERSION=$(echo $ARRAY_VERSIONS_JSON | jq last) # Get the last version in array
+          fi 
 
-      - name: Bump the package version and build
+          echo ::set-output name=number::${LATEST_VERSION}
+          echo "The Current NPM Registry Package Version: ${LATEST_VERSION}"
+
+      - name: Set the version number of "src/package.json" to latest from npm registry
+        run: npm run set-version ${{ steps.latest_version.outputs.number }}
+        working-directory: src/
+
+      - name: Bump the "src/package.json" version number
         run: |
           if [[ "${{ steps.bump_label_check.outputs.bump_label }}" == *"patch"* ]]; then
             npm run bump-patch
@@ -81,21 +95,26 @@ jobs:
           else
             npm run bump-patch
           fi 
-          npm run bump-build
-        working-directory: ./src
+        working-directory: src/
 
-      - name: Get the package version and build
-        id: package_vars
-        run: |
-          sudo apt-get install jq
-          echo ::set-output name=build_number::"$(jq -r '.build' package.json)"
-          echo ::set-output name=version_number::"$(jq -r '.version' package.json)"
-        working-directory: ./src
+      - name: Set the "src/package-lock.json" version number
+        run: npm run set-lock-version "$(jq -r '.version' package.json)"
+        working-directory: src/
 
-      - name: Match the project version and build to package version and build
-        run: |
-          npm run set-build ${{ steps.package_vars.outputs.build_number }}
-          npm run set-version ${{ steps.package_vars.outputs.version_number }}
+      - name: Bump the "src/package.json" build number
+        run: npm run bump-build
+        working-directory: src/
+
+      - name: Set the "package.json" version number
+        run: npm run set-version "$(jq -r '.version' src/package.json)"
+        working-directory: ./
+
+      - name: Set the "package-lock.json" version number
+        run: npm run set-lock-version "$(jq -r '.version' src/package.json)"
+        working-directory: ./
+
+      - name: Set the "package.json" build number
+        run: npm run set-build "$(jq -r '.build' src/package.json)"
         working-directory: ./
 
       - name: Set GitHub User
@@ -103,13 +122,13 @@ jobs:
           git config --global user.name "System Bot"
           git config --global user.email "${{ secrets.SYSTEM_EMAIL }}"
 
-      - name: Reset .npmrc File # We don't want to check in the NPM token by accident
-        run: git checkout .npmrc
-        working-directory: ./
-
       - name: Git Push
         run: |
+          echo "The user: ${{ github.actor }}"
           git add package.json
+          git add package-lock.json
           git add src/package.json
+          git add src/package-lock.json
           git commit -m "Version and Build bump by CI [skip ci]"
           git push
+        working-directory: ./
