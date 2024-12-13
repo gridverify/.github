@@ -1,0 +1,5 @@
+{
+    "name": "Reassign PRs after RC Close",
+    "description": "Reassign the PRs that are assigned to a milestone to a new milestone because the Release Candidate has been closed and not merged.",
+    "iconName": "octicon copilot"
+}

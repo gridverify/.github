@@ -1,0 +1,41 @@
+name: Assign Milestone to PR
+# Add the PR to the milestone when it gets merged into main
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+
+jobs:
+  assign_milestone_to_pr_job:
+    name: Assign Milestone to PR Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Get GH vars
+        id: gh_vars
+        run: |
+          echo ::set-output name=repo_name::${GITHUB_REPOSITORY#*/}
+
+      - name: Get RC Milestone
+        id: result
+        uses: cketant/fetch-rc-milestone@v1.0.2
+        with:
+          repoOwner: ${{ github.repository_owner }}
+          repo: ${{ steps.gh_vars.outputs.repo_name }}
+          githubApiToken: ${{ secrets.GH_API_TOKEN }}
+          
+      - name: Assign PR to RC Milestone
+        uses: zoispag/action-assign-milestone@v1.1.0
+        with:
+          repo-token: ${{ secrets.GH_API_TOKEN }}
+          milestone: ${{ steps.result.outputs.milestone-title }}

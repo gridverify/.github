@@ -50,3 +50,21 @@ jobs:
     with: 
       TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
       TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Assign-Milestone-To-PR:
+    if: ${{ github.event.action == 'closed' && github.event.pull_request.merged == true && github.base_ref == 'main' }}
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/assign-milestone-to-pr.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
+
+  Reassign-PRs-To-Milestone:
+    if: ${{ github.event.action == 'closed' && github.event.pull_request.merged == false && github.base_ref == 'production' && github.event.pull_request.milestone != null }}
+    needs: ['Setup-Init-CI-Vars']
+    uses: ./.github/workflows/reassign-prs-after-close.yml
+    secrets: inherit
+    with: 
+      TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
+      TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}

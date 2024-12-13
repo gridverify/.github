@@ -1,0 +1,5 @@
+{
+    "name": "Assign a Milestone to a PR",
+    "description": "Assign a milestone to a Pull Request so that it is grouped to a Release.",
+    "iconName": "octicon copilot"
+}

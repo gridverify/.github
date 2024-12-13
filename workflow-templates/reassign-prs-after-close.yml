@@ -1,0 +1,53 @@
+name: Reassign RC PRs in a Milestone
+# Reassign Release Candidate PRs from milestone to another milestone if the Release Candidate PR is closed and not merged in
+
+on:
+  workflow_call:
+    inputs:
+      TARGET_ENV:
+        description: 'What environment are we targeting: staging, production, etc'
+        required: true
+        type: string
+      TARGET_APP:
+        description: 'The name of the app instance in heroku (i.e. grid-orchestrator-sandbox, grid-orchestrator-staging, grid-orchestrator)'
+        required: true
+        type: string
+
+jobs:
+  reassign_prs_delete_milestone_job:
+    name: Reassign PRs & Delete Milestone Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Get GH vars
+        id: gh_vars
+        run: |
+          echo ::set-output name=repo_name::${GITHUB_REPOSITORY#*/}
+
+      - name: Fetch Next RC Milestone
+        id: rc_milestone
+        uses: cketant/fetch-rc-milestone@v1.0.2
+        with:
+          repoOwner: ${{ github.repository_owner }}
+          repo: ${{ steps.gh_vars.outputs.repo_name }}
+          githubApiToken: ${{ secrets.GH_API_TOKEN }}
+
+      - name: Reassign PRs and Delete Milestone
+        uses: cketant/reassign-deleted-milestone@v1.0.1
+        with:
+          repoOwner: ${{ github.repository_owner }}
+          repo: ${{ steps.gh_vars.outputs.repo_name }}
+          githubApiToken: ${{ secrets.GH_API_TOKEN }}
+          deleteMilestoneNumber: ${{ github.event.pull_request.milestone.number }}
+          reassignMilestoneNumber: ${{ steps.rc_milestone.outputs.milestone-number }}
+
+      - name: Notify GitHub Reviewer
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} the PRs related to this Release Candidate have been moved to the **${{ steps.rc_milestone.outputs.milestone-title }}** milestone
