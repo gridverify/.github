@@ -14,10 +14,15 @@ jobs:
     name: Deploy To "${{ inputs.instance }}" Job
     env:
       NODE_ENV: production
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_API_TOKEN }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
+
       - name: Deploy to "${{ inputs.instance }}"
         uses: akhileshns/heroku-deploy@v3.8.9
         with:

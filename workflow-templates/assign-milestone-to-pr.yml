@@ -18,8 +18,6 @@ jobs:
     name: Assign Milestone to PR Job
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
 
       - name: Get GH vars
         id: gh_vars

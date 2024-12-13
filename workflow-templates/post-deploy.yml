@@ -15,14 +15,17 @@ on:
 
 jobs:
   tag_release_job:
-    if: github.ref_name == 'production'
+    if: ${{ github.event.pull_request.base.ref == 'production' && github.event.pull_request.merged == true }}
     name: Tag & Release Prod Job
     env:
       GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_API_TOKEN }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_API_TOKEN }}
       - name: Get Vars
         run: |
           sudo apt-get install jq
@@ -59,8 +62,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18.12.x'
-      - name: Authenticate with private NPM package
-        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - name: Install Dependencies
         run: npm ci
       - name: Bump Build
@@ -94,8 +95,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18.12.x'
-      - name: Authenticate with private NPM package
-        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - name: Install Dependencies
         run: npm ci
       - name: Bump Version and Build

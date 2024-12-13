@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+
+  pull_request: # represents push to `production` coupled with checking if merged
+    types: [closed]
+    branches: 
       - production
 
 jobs: 
@@ -25,19 +29,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        instance: ['domain-model-postman-staging', 'grid-domain-model-sandbox', 'grid-domain-model-staging']
+        instance: ['grid-orchestrator-ui-staging', 'grid-orchestrator-ui-sandbox']
     uses: ./.github/workflows/deploy-heroku-instances.yml
     with:
       instance: ${{ matrix.instance }}
     secrets: inherit
 
   Deploy-Production:
-    if: github.ref_name == 'production'
+    if: ${{ github.event.pull_request.base.ref == 'production' && github.event.pull_request.merged == true }}
     needs: ['Setup-Init-CI-Vars']
     strategy:
       fail-fast: false
       matrix:
-        instance: ['grid-domain-model', 'grid-domain-model-postman']
+        instance: ['grid-orchestrator-ui']
     uses: ./.github/workflows/deploy-heroku-instances.yml
     with:
       instance: ${{ matrix.instance }}
@@ -50,7 +54,7 @@ jobs:
     with: 
       TARGET_ENV: ${{ needs.Setup-Init-CI-Vars.outputs.ENV_NAME }}
       TARGET_APP: ${{ needs.Setup-Init-CI-Vars.outputs.APP_NAME }}
-      SOURCE_MAPS: './dist'
+      SOURCE_MAPS: './src/build'
 
   Post-Deploy:
     needs: ['Deploy-Sentry']
