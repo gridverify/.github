@@ -120,3 +120,52 @@ jobs:
           allow-repeats: true
           message: |
             @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please check the `${{ github.job }}`'s summary page, download the `test-report` artifact, and update your failing tests.
+
+  app_start_test_job:
+    name: App Start Test Job
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_API_TOKEN }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.x'
+      - name: Authenticate with private NPM package
+        env:
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+      - name: Install Dependencies
+        run: npm ci
+      - name: Get project env variables
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          HEROKU_API_TOKEN: ${{ secrets.HEROKU_API_TOKEN }}
+          NODE_ENV: ${{ inputs.TARGET_ENV }}
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        run: |
+          HEROKU_API_KEY=$HEROKU_API_TOKEN heroku config -a ${{ inputs.TARGET_APP }} > env.yaml
+          for keyval in $(grep -E ':\s+' env.yaml | sed -e 's/: */=/'); do
+            echo $keyval >> .env
+          done
+      - name: Build App
+        run: npm run build --loglevel error
+      - name: App Startup
+        run: |
+          npm run start & # Run in background
+          sleep 10 # Wait seconds for server startup
+          curl http://localhost:3004 # Test if it's up
+      - name: Fail Check
+        if: failure()
+        uses: mshick/add-pr-comment@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          NPM_TOKEN: ${{ env.NPM_TOKEN }}
+        with:
+          allow-repeats: true
+          message: |
+            @${{ github.actor }} the `${{ github.job }}` job failed 😧. Please check the `${{ github.job }}`'s summary page.
