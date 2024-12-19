@@ -31,6 +31,8 @@ jobs:
         run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - name: Install Dependencies
         run: npm ci
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install.sh | sh
       - name: Login To Heroku + Build Server
         id: build
         env:
@@ -88,6 +90,8 @@ jobs:
         run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - name: Install Dependencies
         run: npm ci
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install.sh | sh
       - name: Get project env variables
         id: test
         env:
@@ -140,6 +144,8 @@ jobs:
         run: rm .npmrc && echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
       - name: Install Dependencies
         run: npm ci
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install.sh | sh
       - name: Get project env variables
         id: test
         env:

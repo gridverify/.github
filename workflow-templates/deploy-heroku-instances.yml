@@ -23,6 +23,9 @@ jobs:
         with:
           token: ${{ secrets.GH_API_TOKEN }}
 
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install.sh | sh
+
       - name: Deploy to "${{ inputs.instance }}"
         uses: akhileshns/heroku-deploy@v3.8.9
         with:
