@@ -51,6 +51,7 @@ jobs:
         with:
           filterOutClosed: false
           filterOutDraft: true
+          sha: ${{ github.event.pull_request.head.sha }}
 
       - name: Extract Bump Label
         id: bump_label_check
